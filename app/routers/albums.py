@@ -349,3 +349,57 @@ async def refresh_albums(db: aiosqlite.Connection = Depends(get_db)):
     if removed_ids:
         await db.commit()
     return {"checked": checked, "removed": len(removed_ids), "ids": removed_ids}
+
+
+@router.delete("/albums/{album_id}")
+async def delete_album(album_id: int, db: aiosqlite.Connection = Depends(get_db)):
+    """Delete an album by id. This removes the album record from the database.
+
+    Note: Thumbs have ON DELETE CASCADE so they will be removed by DB. We also
+    attempt to unlink the cover file if it exists on disk.
+    """
+    # load the album record (include type and path)
+    async with db.execute("SELECT id, type, path, cover_path FROM albums WHERE id=?", (album_id,)) as cur:
+        row = await cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="album not found")
+    id, typ, parent_path, cover_path = row
+    to_delete: list[tuple] = []  # rows of (id, type, path, cover_path)
+    to_delete.append((id, cover_path))
+    if typ == "folder":
+        # collect target rows: parent + any descendants whose path starts with parent_path
+        # normalize stripping trailing slashes/backslashes for prefix match
+        prefix = parent_path.rstrip("\\/")
+        pattern = prefix + "%"
+        # include the parent explicitly and then any rows with path LIKE prefix%
+        async with db.execute(
+            "SELECT id, cover_path FROM albums WHERE path = ? OR path LIKE ? ORDER BY mtime DESC",
+            (parent_path, pattern),
+        ) as cur:
+            rows = await cur.fetchall()
+            for r in rows:
+                to_delete.append((r[0], r[1]))
+
+    ids = [r[0] for r in to_delete]
+
+    # delete all in one operation
+    placeholders = ",".join(["?"] * len(ids))
+    await db.execute(f"DELETE FROM albums WHERE id IN ({placeholders})", tuple(ids))
+    await db.commit()
+
+    # best-effort: remove cover files for deleted rows if they are inside cache/covers
+    cache_dir = os.path.abspath(os.path.join("cache", "covers"))
+    for _id, cpath in to_delete:
+        try:
+            if cpath:
+                abs_cover = os.path.abspath(cpath)
+                if abs_cover.startswith(cache_dir) and os.path.exists(abs_cover):
+                    try:
+                        os.remove(abs_cover)
+                    except Exception:
+                        pass
+        except Exception:
+            # ignore filesystem issues per-row
+            pass
+
+    return {"ok": True, "deleted": len(ids), "ids": ids}

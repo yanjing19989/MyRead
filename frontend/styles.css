@@ -1,5 +1,6 @@
 /* Extracted styles from index.html */
 :root {
+    color-scheme: dark;
     --bg: #0f1115;
     --panel: #151922;
     --muted: #a0a6b4;
@@ -10,6 +11,21 @@
     --err: #ff6b6b;
     --card: #1a1f2b;
     --border: #23293a;
+}
+@media (prefers-color-scheme: light) {
+    :root {
+        color-scheme: light;
+        --bg: #f4f6fb;
+        --panel: #ffffff;
+        --muted: #5a6273;
+        --text: #101726;
+        --accent: #2f6bff;
+        --ok: #1c9c66;
+        --warn: #c78200;
+        --err: #d54848;
+        --card: #ffffff;
+        --border: #cdd6e5;
+    }
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -53,6 +69,9 @@ main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px
 
 .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: clip; }
 .panel h2 { margin: 0; font-size: 14px; padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--muted); letter-spacing: 0.3px; }
+.panelHeader { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.panelHeader h2 { margin: 0; font-size: 14px; color: var(--muted); }
+.panelHeader .panelActions { display: flex; gap: 8px; align-items: center; }
 .panel .body { padding: 12px; }
 
 .albums {
@@ -100,3 +119,30 @@ main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px
 .tname { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tmeta { color: var(--muted); font-size: 12px; }
 .tchildren { margin-left: 18px; border-left: 1px dashed #2a3246; padding-left: 10px; }
+
+/* Album context menu (used by frontend/js/app.js) */
+.album-context-menu {
+    position: fixed;
+    z-index: 10000;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    /* use opacity/transform for smooth enter/leave animation */
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+    pointer-events: none; /* ignore pointer events when hidden */
+    transition: opacity 300ms cubic-bezier(.2,.9,.25,1), transform 300ms cubic-bezier(.2,.9,.25,1);
+}
+/* visible state: use .visible class to show the menu */
+.album-context-menu.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+/* keep a hidden helper class for legacy code but avoid display:none so animations run */
+.album-context-menu.hidden { opacity: 0; transform: translateY(-8px) scale(0.95); pointer-events: none; }
+.album-context-menu .ctx-item { padding: 6px 12px; cursor: pointer; user-select: none; white-space: nowrap; }
+.album-context-menu .ctx-item:hover { background: var(--panel); }
+.album-context-menu .ctx-item.delete { color: var(--err); font-weight: 600; }

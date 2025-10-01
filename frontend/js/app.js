@@ -1,6 +1,84 @@
 import { $, $$, fmt, api, normPath, lowerPath, parentDirPath, state, logLine, sseConnect } from './lib.js';
 
 let treeSearchTimer = null;
+// ----- context menu for albums -----
+let albumContextMenu = null;
+function ensureAlbumContextMenu() {
+    if (albumContextMenu) return albumContextMenu;
+    const menu = document.createElement('div');
+    menu.id = 'albumContextMenu';
+    // styling moved to CSS: .album-context-menu
+    menu.className = 'album-context-menu hidden';
+    // internal hide timer so we can wait for transition before fully hiding
+    menu._hideTimer = null;
+    menu.addEventListener('click', (e) => e.stopPropagation());
+
+    const makeItem = (text, cls) => {
+        const it = document.createElement('div');
+        it.className = 'ctx-item' + (cls ? ' ' + cls : '');
+        it.textContent = text;
+        return it;
+    };
+
+    const openItem = makeItem('打开相册', 'open');
+    const delItem = makeItem('删除相册', 'delete');
+
+    menu.appendChild(openItem);
+    menu.appendChild(delItem);
+
+    document.body.appendChild(menu);
+    albumContextMenu = menu;
+
+    // hide on any click/escape
+    document.addEventListener('click', () => hideAlbumContextMenu());
+    document.addEventListener('contextmenu', () => hideAlbumContextMenu());
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideAlbumContextMenu(); });
+
+    return albumContextMenu;
+}
+
+function showAlbumContextMenu(x, y, album) {
+    const menu = ensureAlbumContextMenu();
+    menu._album = album;
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    // clear any pending hide timers
+    if (menu._hideTimer) { clearTimeout(menu._hideTimer); menu._hideTimer = null; }
+    // ensure hidden class is removed and add visible to trigger transition
+    menu.classList.remove('hidden');
+    menu.classList.add('visible');
+    // wire actions
+    const openIt = menu.querySelector('.ctx-item.open');
+    const delIt = menu.querySelector('.ctx-item.delete');
+    openIt.onclick = (ev) => { ev.stopPropagation(); hideAlbumContextMenu(); if (album?.path) openAlbum(album.path); };
+    delIt.onclick = async (ev) => {
+        ev.stopPropagation(); hideAlbumContextMenu();
+        if (!album) return alert('未指定要删除的相册');
+        if (!confirm(`确定要移除相册：${album.name || album.path} 吗？此操作会从数据库中删除该相册记录（磁盘文件不受影响）。`)) return;
+        try {
+            await api(`/api/albums/${album.id}`, { method: 'DELETE' });
+            logLine(`删除相册 ${album.name || album.path}: ok`, 'ok');
+            await loadAlbums();
+        } catch (e) {
+            logLine(`删除失败: ${e}`, 'err');
+            alert('删除失败');
+        }
+    };
+}
+
+function hideAlbumContextMenu() {
+    if (!albumContextMenu) return;
+    const menu = albumContextMenu;
+    // remove visible to start transition; after transition ends, add hidden
+    menu.classList.remove('visible');
+    menu._album = null;
+    if (menu._hideTimer) clearTimeout(menu._hideTimer);
+    menu._hideTimer = setTimeout(() => {
+        menu.classList.add('hidden');
+        menu._hideTimer = null;
+    }, 200); // slightly longer than CSS transition to ensure it's finished
+}
+
 
 async function loadAlbums(options = {}) {
     const { forceRoot = false } = options;
@@ -97,6 +175,14 @@ function renderAlbums() {
             card.classList.add('is-folder');
             card.onclick = () => openAlbum(album.path);
         }
+        // bind right-click context menu for album actions
+        card.addEventListener('contextmenu', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            const x = ev.clientX;
+            const y = ev.clientY;
+            showAlbumContextMenu(x, y, album);
+        });
         grid.appendChild(card);
     }
 }
@@ -213,6 +299,15 @@ function renderAlbumTree() {
             }
         };
 
+        // bind right-click on tree row
+        row.addEventListener('contextmenu', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            const x = ev.clientX;
+            const y = ev.clientY;
+            showAlbumContextMenu(x, y, album);
+        });
+
         const wrap = document.createElement('div');
         wrap.appendChild(row);
         wrap.appendChild(childrenBox);
@@ -266,8 +361,10 @@ function bindUi() {
         }
     };
 
+    // refresh button (now inside albums panel)
     $('#refreshBtn').onclick = async () => {
-        $('#refreshBtn').disabled = true;
+        const btn = $('#refreshBtn');
+        btn.disabled = true;
         try {
             const res = await api('/api/albums/refresh', { method: 'POST' });
             logLine(`刷新完成: 检查=${res.checked} 删除=${res.removed}`, res.removed ? 'warn' : 'ok');
@@ -276,7 +373,7 @@ function bindUi() {
             logLine(`刷新失败: ${e}`, 'err');
             alert('刷新失败');
         } finally {
-            $('#refreshBtn').disabled = false;
+            btn.disabled = false;
         }
     };
 }

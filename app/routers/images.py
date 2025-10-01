@@ -42,18 +42,14 @@ async def get_cover(
             return FileResponse(cp, media_type="image/*")
     entry_path = await first_entry(db, album_id)
     if not entry_path and album["type"] == "folder":
-        print("album cover_path:", cp, "type:", atype, "path:", apath)
         parent_path = album["path"]
         prefix = parent_path.rstrip("\\")
-        print("searching children under:", prefix)
-        print("parent_path:", parent_path)
         async with db.execute(
             "SELECT id, type, path, cover_path FROM albums WHERE path LIKE ? AND path != ? ORDER BY mtime DESC",
             (prefix + "%", parent_path),
         ) as cur:
             rows = await cur.fetchall()
         child_entry = None
-        print("found children:", rows)
         for cid, ctype, cpath, cover in rows:
             if cover:
                 if os.path.isabs(cover) and os.path.exists(cover):

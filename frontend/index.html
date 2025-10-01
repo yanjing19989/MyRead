@@ -14,12 +14,16 @@
 			<label class="row hint"><input id="recursiveCb" type="checkbox" /> 递归扫描</label>
 		</div>
 		<button id="scanBtn">添加路径并扫描</button>
-		<button class="secondary" id="refreshBtn">刷新相册</button>
 	</header>
 
 	<main>
 		<section class="panel" id="albumsPanel">
-			<h2>相册</h2>
+			<div class="panelHeader">
+				<h2>相册</h2>
+				<div class="panelActions">
+					<button class="secondary" id="refreshBtn">刷新相册</button>
+				</div>
+			</div>
 			<div class="body">
 				<div class="row" id="albumsNav" style="margin: 0 0 8px 0; display:none; align-items:center; justify-content: space-between;">
 					<div class="row" style="gap:8px; align-items:center;">
