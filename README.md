@@ -19,7 +19,6 @@ uvicorn app.main:app --reload --port 8000
 ## Albums API 更新
 
 - `GET /api/albums` 增加 `scope` 参数：
-	- `page`（默认）保持原有分页行为。
 	- `children` 返回指定路径下的直接相册节点，并包含 `parent` 与 `ancestors` 信息，便于构建目录导航。
 	- `tree` 返回完整树状结构，后端会根据 `keyword` 参数执行路径/名称过滤。
 - `parent_path` 和 `keyword` 过滤逻辑全部在后端执行，前端无需再手动裁剪目录树。

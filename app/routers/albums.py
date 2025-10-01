@@ -184,56 +184,17 @@ async def scan_albums(body: dict, db: aiosqlite.Connection = Depends(get_db)):
 
 @router.get("/albums")
 async def list_albums(
-    page: int = 1,
-    per_page: int = 24,
     sort_by: Literal["name", "added_at", "mtime", "size", "file_count"] = "added_at",
     order: Literal["asc", "desc"] = "desc",
     keyword: str | None = None,
-    scope: Literal["page", "children", "tree"] = "page",
+    scope: Literal["children", "tree"] = "children",
     parent_path: str | None = None,
     db: aiosqlite.Connection = Depends(get_db),
 ):
     sort_col = sort_by
     order_sql = "ASC" if order == "asc" else "DESC"
-    scope_val = (scope or "page").lower()
+    scope_val = (scope or "children").lower()
 
-    if scope_val == "page":
-        page = max(1, page)
-        per_page = min(200, max(1, per_page))
-
-        params: list = []
-        where = ""
-        if keyword:
-            where = "WHERE name LIKE ?"
-            params.append(f"%{keyword}%")
-
-        async with db.execute(f"SELECT COUNT(1) FROM albums {where}", params) as cur:
-            row = await cur.fetchone()
-            total = row[0] if row else 0
-
-        offset = (page - 1) * per_page
-        async with db.execute(
-            f"SELECT id, type, path, name, mtime, size, file_count, added_at, cover_path FROM albums {where} ORDER BY {sort_col} {order_sql} LIMIT ? OFFSET ?",
-            (*params, per_page, offset),
-        ) as cur:
-            items = [
-                {
-                    "id": r[0],
-                    "type": r[1],
-                    "path": r[2],
-                    "name": r[3],
-                    "mtime": r[4],
-                    "size": r[5],
-                    "file_count": r[6],
-                    "added_at": r[7],
-                    "cover_path": r[8],
-                }
-                for r in await cur.fetchall()
-            ]
-
-        return {"items": items, "total": total, "page": page, "per_page": per_page}
-
-    # scope != page -> operate on in-memory dataset
     records = await _load_all_albums(db)
     by_key = {rec["_key_path"]: rec for rec in records}
     keyword_lower = keyword.lower() if keyword else None
@@ -268,8 +229,6 @@ async def list_albums(
         return {
             "items": items,
             "total": len(items),
-            "page": 1,
-            "per_page": len(items),
             "parent": parent_payload,
             "ancestors": ancestors_payload,
         }
