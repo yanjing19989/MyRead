@@ -69,12 +69,6 @@ def _resize(img: Image.Image, w: int, h: int, fit: FitMode) -> Image.Image:
     img = img.crop(box)
     return img.resize((w, h), Image.Resampling.LANCZOS)
 
-
-async def _ensure_thumbs_table(db: aiosqlite.Connection):
-    # already created in schema; no-op function left for symmetry
-    return
-
-
 async def get_or_create_thumb(
     db: aiosqlite.Connection,
     *,
@@ -87,14 +81,9 @@ async def get_or_create_thumb(
     fit: FitMode,
     fmt: str = "webp",
     quality: int | None = None,
-    crop: Optional[dict] = None,
 ) -> tuple[str, str]:
-    # key format aligns with design: album_id|entry|w|h|fit|fmt|q|v
     q = int(quality or settings.default_quality)
-    crop_part = ""
-    if crop:
-        crop_part = f"|crop:{crop.get('x',0):.4f},{crop.get('y',0):.4f},{crop.get('w',1):.4f},{crop.get('h',1):.4f}"
-    key = f"{album_id}|{entry_path or 'cover'}|{w}|{h}|{fit}|{fmt}|{q}{crop_part}|v1"
+    key = f"{album_id}|{entry_path or 'cover'}|{w}|{h}|{fit}|{fmt}|{q}|v1"
     file_path = cache_path(os.path.join(settings.cache_dir, "thumbs"), key, fmt)
 
     # try DB first
@@ -110,15 +99,6 @@ async def get_or_create_thumb(
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     events.publish("thumb:start", {"album_id": album_id, "entry": entry_path, "w": w, "h": h})
     img = _open_image_from_path(album_type, album_path, entry_path)
-    # apply crop if provided (normalized 0..1)
-    if crop:
-        x = max(0.0, min(1.0, float(crop.get('x', 0))))
-        y = max(0.0, min(1.0, float(crop.get('y', 0))))
-        cw = max(0.0, min(1.0, float(crop.get('w', 1))))
-        ch = max(0.0, min(1.0, float(crop.get('h', 1))))
-        sw, sh = img.size
-        box = (int(x * sw), int(y * sh), int((x + cw) * sw), int((y + ch) * sh))
-        img = img.crop(box)
     img = _resize(img, w, h, fit)
     save_params = {"format": fmt.upper()}
     if fmt.lower() == "webp":

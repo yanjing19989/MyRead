@@ -6,37 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 import aiosqlite
 
 from ..db import get_db
-from ..services.scanner import scan_paths, ScanOptions
-from ..services.entries import list_entries, first_entry
+from ..services.scanner import scan_paths, ScanOptions, normalize_album_path
+from ..services.entries import list_entries
 from ..utils.fs import is_image_name, is_zip_name
 from natsort import natsorted, ns
 
 router = APIRouter(tags=["albums"])
-
-
-def _normalize_path(value: str | None) -> str:
-    if not value:
-        return ""
-    normed = os.path.normpath(value)
-    normed = normed.replace("\\", "/")
-    if normed == ".":
-        return ""
-    if normed.startswith("//"):
-        prefix = "//"
-        rest = normed[2:]
-        while "//" in rest:
-            rest = rest.replace("//", "/")
-        normed = prefix + rest
-    else:
-        while "//" in normed:
-            normed = normed.replace("//", "/")
-    if len(normed) > 1 and normed.endswith("/"):
-        if len(normed) == 3 and normed[1] == ":":
-            normed = normed[:-1]
-        else:
-            normed = normed.rstrip("/")
-    return normed
-
 
 def _split_segments(norm_path: str) -> list[str]:
     if not norm_path:
@@ -51,6 +26,7 @@ def _split_segments(norm_path: str) -> list[str]:
 
 
 def _join_segments(parts: list[str]) -> str:
+    """Join segments back into a normalized path, preserving '//' head handling."""
     if not parts:
         return ""
     if parts[0].startswith("//"):
@@ -61,6 +37,7 @@ def _join_segments(parts: list[str]) -> str:
 
 
 def _parent_path(norm_path: str) -> str | None:
+    """Return the parent normalized path or None for root-level paths."""
     segments = _split_segments(norm_path)
     if len(segments) <= 1:
         return None
@@ -69,17 +46,9 @@ def _parent_path(norm_path: str) -> str | None:
 
 
 def _public_album(rec: dict) -> dict:
-    return {
-        "id": rec["id"],
-        "type": rec["type"],
-        "path": rec["path"],
-        "name": rec["name"],
-        "mtime": rec["mtime"],
-        "size": rec["size"],
-        "file_count": rec["file_count"],
-        "added_at": rec["added_at"],
-        "cover_path": rec["cover_path"],
-    }
+    """Return the public view of an album record (stable output used by API)."""
+    keys = ("id", "type", "path", "name", "mtime", "size", "file_count", "added_at", "cover_path")
+    return {k: rec.get(k) for k in keys}
 
 
 async def _load_all_albums(db: aiosqlite.Connection) -> list[dict]:
@@ -100,7 +69,7 @@ async def _load_all_albums(db: aiosqlite.Connection) -> list[dict]:
             "added_at": row[7],
             "cover_path": row[8],
         }
-        norm_path = _normalize_path(rec["path"])
+        norm_path = normalize_album_path(rec["path"])
         rec["_norm_path"] = norm_path
         rec["_key_path"] = norm_path.lower()
         parts = _split_segments(norm_path)
@@ -270,7 +239,7 @@ async def list_albums(
     keyword_lower = keyword.lower() if keyword else None
 
     if scope_val == "children":
-        parent_norm = _normalize_path(parent_path) if parent_path else ""
+        parent_norm = normalize_album_path(parent_path) if parent_path else ""
         parent_key = parent_norm.lower() if parent_norm else None
         parent_rec = by_key.get(parent_key) if parent_key else None
         if parent_norm and not parent_rec:
@@ -308,7 +277,7 @@ async def list_albums(
     if scope_val == "tree":
         roots, node_map = _build_tree(records)
 
-        parent_norm = _normalize_path(parent_path) if parent_path else ""
+        parent_norm = normalize_album_path(parent_path) if parent_path else ""
         if parent_norm:
             node = node_map.get(parent_norm.lower())
             if not node:
@@ -326,7 +295,7 @@ async def list_albums(
 @router.get("/albums/{album_id}")
 async def get_album(album_id: int, db: aiosqlite.Connection = Depends(get_db)):
     async with db.execute(
-        "SELECT id, type, path, name, mtime, size, file_count, added_at, cover_path, crop FROM albums WHERE id=?",
+        "SELECT id, type, path, name, mtime, size, file_count, added_at, cover_path FROM albums WHERE id=?",
         (album_id,),
     ) as cur:
         r = await cur.fetchone()
@@ -342,80 +311,7 @@ async def get_album(album_id: int, db: aiosqlite.Connection = Depends(get_db)):
             "file_count": r[6],
             "added_at": r[7],
             "cover_path": r[8],
-            "crop": r[9],
         }
-
-
-@router.get("/albums/by-path")
-async def get_album_by_path(path: str, db: aiosqlite.Connection = Depends(get_db)):
-    async with db.execute(
-        "SELECT id, type, path, name, mtime, size, file_count, added_at, cover_path, crop FROM albums WHERE path=?",
-        (path,),
-    ) as cur:
-        r = await cur.fetchone()
-        if not r:
-            raise HTTPException(status_code=404, detail="album not found")
-        return {
-            "id": r[0],
-            "type": r[1],
-            "path": r[2],
-            "name": r[3],
-            "mtime": r[4],
-            "size": r[5],
-            "file_count": r[6],
-            "added_at": r[7],
-            "cover_path": r[8],
-            "crop": r[9],
-        }
-
-
-@router.get("/albums/{album_id}/browse")
-async def browse_folder_album(
-    album_id: int,
-    dir: str = "",
-    db: aiosqlite.Connection = Depends(get_db),
-):
-    async with db.execute("SELECT type, path FROM albums WHERE id=?", (album_id,)) as cur:
-        row = await cur.fetchone()
-    if not row:
-        raise HTTPException(status_code=404, detail="album not found")
-    album_type, root = row[0], row[1]
-    if album_type != "folder":
-        raise HTTPException(status_code=400, detail="browse only for folder albums")
-
-    # sanitize dir
-    rel = (dir or "").lstrip("/\\")
-    abs_dir = os.path.normpath(os.path.join(root, rel))
-    # ensure within root
-    if not abs_dir.startswith(os.path.normpath(root)):
-        raise HTTPException(status_code=400, detail="invalid path")
-    if not os.path.isdir(abs_dir):
-        raise HTTPException(status_code=404, detail="directory not found")
-
-    try:
-        names = [n for n in os.listdir(abs_dir) if n and n[0] != '.']
-    except Exception:
-        names = []
-    names = natsorted(names, alg=ns.IGNORECASE)
-
-    items = []
-    for name in names:
-        p = os.path.join(abs_dir, name)
-        rel_path = os.path.relpath(p, start=root).replace("\\", "/")
-        if os.path.isdir(p):
-            items.append({"name": name, "rel_path": rel_path, "kind": "folder"})
-        elif is_zip_name(name):
-            items.append({"name": name, "rel_path": rel_path, "kind": "zip"})
-        elif is_image_name(name):
-            items.append({"name": name, "rel_path": rel_path, "kind": "image"})
-        else:
-            continue
-
-    # parent path
-    parent = "" if rel == "" else os.path.relpath(os.path.dirname(abs_dir), start=root).replace("\\", "/")
-    if parent == ".":
-        parent = ""
-    return {"cwd": rel, "parent": parent, "items": items}
 
 
 @router.get("/albums/{album_id}/entries")
@@ -465,23 +361,6 @@ async def set_album_cover(
     await db.execute("UPDATE albums SET cover_path=? WHERE id=?", (path, album_id))
     await db.commit()
     return {"ok": True, "cover_path": path}
-
-
-@router.post("/albums/{album_id}/cover/crop")
-async def set_album_cover_crop(
-    album_id: int,
-    body: dict,
-    db: aiosqlite.Connection = Depends(get_db),
-):
-    # body: {x,y,w,h} in 0..1
-    for k in ("x", "y", "w", "h"):
-        if k not in body:
-            raise HTTPException(status_code=400, detail=f"missing {k}")
-    crop_json = json.dumps({k: float(body[k]) for k in ("x", "y", "w", "h")})
-    await db.execute("UPDATE albums SET crop=? WHERE id=?", (crop_json, album_id))
-    await db.commit()
-    return {"ok": True}
-
 
 @router.post("/albums/refresh")
 async def refresh_albums(db: aiosqlite.Connection = Depends(get_db)):

@@ -12,11 +12,11 @@ router = APIRouter(tags=["images"])
 
 
 async def _get_album(db: aiosqlite.Connection, album_id: int):
-    async with db.execute("SELECT id, type, path, cover_path, crop FROM albums WHERE id=?", (album_id,)) as cur:
+    async with db.execute("SELECT id, type, path, cover_path FROM albums WHERE id=?", (album_id,)) as cur:
         r = await cur.fetchone()
         if not r:
             raise HTTPException(status_code=404, detail="album not found")
-    return {"id": r[0], "type": r[1], "path": r[2], "cover_path": r[3], "crop": r[4]}
+    return {"id": r[0], "type": r[1], "path": r[2], "cover_path": r[3]}
 
 
 @router.get("/albums/{album_id}/cover")
@@ -48,13 +48,13 @@ async def get_cover(
         print("searching children under:", prefix)
         print("parent_path:", parent_path)
         async with db.execute(
-            "SELECT id, type, path, cover_path, crop FROM albums WHERE path LIKE ? AND path != ? ORDER BY mtime DESC",
+            "SELECT id, type, path, cover_path FROM albums WHERE path LIKE ? AND path != ? ORDER BY mtime DESC",
             (prefix + "%", parent_path),
         ) as cur:
             rows = await cur.fetchall()
         child_entry = None
         print("found children:", rows)
-        for cid, ctype, cpath, cover, ccrop in rows:
+        for cid, ctype, cpath, cover in rows:
             if cover:
                 if os.path.isabs(cover) and os.path.exists(cover):
                     return FileResponse(cover, media_type="image/*")
@@ -67,15 +67,6 @@ async def get_cover(
         if not entry_path:
             raise HTTPException(status_code=404, detail="no images in album or its children")
 
-    # parse crop if present
-    crop = None
-    if album.get("crop"):
-        try:
-            import json as _json
-            crop = _json.loads(album["crop"]) if isinstance(album["crop"], str) else album["crop"]
-        except Exception:
-            crop = None
-
     _, path = await get_or_create_thumb(
         db,
         album_id=album["id"],
@@ -87,7 +78,6 @@ async def get_cover(
         fit=fit if fit in ("cover", "contain") else "cover",
         fmt=fmt,
         quality=q,
-        crop=crop,
     )
     media_type = "image/webp" if fmt.lower() == "webp" else "application/octet-stream"
     await db.execute("UPDATE albums SET cover_path=? WHERE id=?", (path, album_id))

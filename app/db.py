@@ -19,8 +19,7 @@ CREATE TABLE IF NOT EXISTS albums (
   size INTEGER NOT NULL,
   file_count INTEGER NOT NULL,
   added_at INTEGER NOT NULL,
-  cover_path TEXT NULL,
-  crop TEXT NULL
+  cover_path TEXT NULL
 );
 
 CREATE TABLE IF NOT EXISTS thumbs (
