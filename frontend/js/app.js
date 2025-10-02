@@ -1,4 +1,4 @@
-import { $, $$, fmt, api, normPath, lowerPath, parentDirPath, state, logLine, sseConnect } from './lib.js';
+import { $, $$, fmt, fmtSize, api, normPath, lowerPath, parentDirPath, state, logLine, sseConnect } from './lib.js';
 
 let treeSearchTimer = null;
 // ----- context menu for albums -----
@@ -167,8 +167,11 @@ function renderAlbums() {
         card.innerHTML = `
             <div class="thumb"><img loading="lazy" src="${coverUrl}" alt="cover"></div>
             <div class="meta">
-                <div class="name" title="${album.name}">${album.name}</div>
-                <div class="sub">类型: ${album.type} · 页数: ${fmt(album.file_count)}</div>
+                <div class="meta-top">
+                    <div class="name" title="${album.name}">${album.name}</div>
+                    <div class="type-badge ${album.type === 'folder' ? 'folder' : album.type === 'zip' ? 'zip' : ''}">${album.type || ''}</div>
+                </div>
+                <div class="sub">页数: ${fmt(album.file_count)}${album.size != null ? ' · 大小: ' + fmtSize(album.size) : ''}</div>
             </div>
         `;
         if (album.type === 'folder') {
@@ -270,14 +273,22 @@ function renderAlbumTree() {
         const icon = document.createElement('span');
         icon.className = 'ticon';
         icon.textContent = album.type === 'zip' ? zipIcon : folderIcon;
-        const name = document.createElement('div');
-        name.className = 'tname';
-        name.title = album.path || '';
-        name.textContent = album.name || (album.path ? album.path.split('/').pop() : '');
+    const name = document.createElement('div');
+    name.className = 'tname';
+    name.title = album.path || '';
+    name.textContent = album.name || (album.path ? album.path.split('/').pop() : '');
         const meta = document.createElement('div');
-        meta.className = 'tmeta';
-        meta.textContent = `${album.type || ''} · ${fmt(album.file_count || 0)} 页`;
-        row.append(toggle, icon, name, meta);
+    meta.className = 'tmeta';
+    const fileCountText = `${fmt(album.file_count || 0)} 页`;
+    const sizeText = album.size != null ? ` · ${fmtSize(album.size)}` : '';
+    meta.textContent = `${fileCountText}${sizeText}`;
+    // create a badge element for type and append inside name so it's on the same row
+    const tbadge = document.createElement('div');
+    tbadge.className = 'tbadge ' + (album.type === 'folder' ? 'folder' : album.type === 'zip' ? 'zip' : '');
+    tbadge.textContent = album.type || '';
+    // append badge into the name container so name and type are inline
+    name.appendChild(tbadge);
+    row.append(toggle, icon, name, meta);
 
         const childrenBox = document.createElement('div');
         childrenBox.className = 'tchildren';

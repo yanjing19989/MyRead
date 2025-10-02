@@ -107,7 +107,7 @@ main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px
     border-radius: 0 0 11px 11px;
 }
 .meta .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.meta .sub { color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; }
+.meta .sub { color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; justify-content: center; }
 
 .browser { display: grid; gap: 10px; }
 .crumbs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -145,6 +145,34 @@ main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px
 .tname { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tmeta { color: var(--muted); font-size: 12px; }
 .tchildren { margin-left: 18px; border-left: 1px dashed #2a3246; padding-left: 10px; }
+
+/* Type badge for grid cards (overlay) */
+.meta { padding: 8px 10px; }
+/* make the top part of meta hold name and type on one row */
+.meta-top { display: flex; align-items: center; justify-content: space-between; }
+.meta .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.type-badge {
+    display: inline-block;
+    padding: 0px 4px;
+    border-radius: 12px;
+    font-size: 12px;
+    border: 1.5px solid transparent;
+    text-align: center;
+}
+.type-badge.zip { border-color: var(--accent); color: var(--text); background: rgba(79,140,255,0.06); }
+.type-badge.folder { border-color: var(--warn); color: var(--text); background: rgba(255,176,32,0.06); }
+
+/* Tree badge: keep it inline with the tname */
+.tname { display: flex; align-items: center; gap: 8px; }
+.tbadge {
+    padding: 0px 4px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text);
+    border: 1.5px solid transparent;
+}
+.tbadge.zip { border-color: var(--accent); background: rgba(79,140,255,0.05); }
+.tbadge.folder { border-color: var(--warn); background: rgba(255,176,32,0.05); }
 
 /* Album context menu (used by frontend/js/app.js) */
 .album-context-menu {

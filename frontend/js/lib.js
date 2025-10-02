@@ -2,6 +2,17 @@
 const $ = (sel, el=document) => el.querySelector(sel);
 const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
 const fmt = (n) => new Intl.NumberFormat('zh-CN').format(n);
+// fmtSize: format bytes into adaptive units (B, KB, MB, GB, TB)
+const fmtSize = (bytes) => {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    let u = 0;
+    let val = Number(bytes);
+    while (val >= 1024 && u < units.length - 1) {
+        val = val / 1024;
+        u++;
+    }
+    return `${val.toFixed(2)} ${units[u]}`;
+};
 const api = async (url, opts={}) => {
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
     if (!res.ok) throw new Error(await res.text());
@@ -52,4 +63,4 @@ function sseConnect() {
     } catch {}
 }
 
-export { $, $$, fmt, api, normPath, lowerPath, parentDirPath, state, logLine, sseConnect };
+export { $, $$, fmt, fmtSize, api, normPath, lowerPath, parentDirPath, state, logLine, sseConnect };

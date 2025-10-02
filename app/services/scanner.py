@@ -19,9 +19,30 @@ class ScanOptions:
 
 
 async def stat_path(path: str) -> tuple[int, int]:
-    st = os.stat(path)
-    return int(st.st_mtime), int(st.st_size)
+    """Return (latest mtime, total size) for a file or directory."""
 
+    def _stat_sync(p: str) -> tuple[int, int]:
+        st = os.stat(p)
+        if not os.path.isdir(p):
+            return int(st.st_mtime), int(st.st_size)
+
+        total_size = 0
+        stack = [p]
+        while stack:
+            d = stack.pop()
+            try:
+                for entry in os.scandir(d):
+                    if entry.is_dir(follow_symlinks=False):
+                        est = entry.stat(follow_symlinks=False)
+                        stack.append(entry.path)
+                    elif entry.is_file(follow_symlinks=False):
+                        est = entry.stat(follow_symlinks=False)
+                        total_size += int(est.st_size)
+            except Exception:
+                continue
+        return int(st.st_mtime), total_size
+
+    return await asyncio.to_thread(_stat_sync, path)
 
 def normalize_album_path(path: str) -> str:
     if not path:
@@ -107,10 +128,11 @@ async def scan_folder(
     """
 
     results: list[dict] = []
+    file_count_dict = {}
     if seen_paths is None:
         seen_paths = set()
 
-    async def upsert_folder_album(folder_path: str, files_in_folder: list[str]) -> dict | None:
+    async def upsert_folder_album(folder_path: str, folder_dir: list[str], files_in_folder: list[str]) -> dict | None:
         # count images among the provided file names (not recursing)
         real_folder_path = os.path.normpath(os.path.abspath(folder_path))
         normalized_path = normalize_album_path(real_folder_path)
@@ -119,6 +141,19 @@ async def scan_folder(
             return None
         images = [f for f in files_in_folder if is_image_name(f)]
         file_count = len(images)
+        # Albums for zip files under this folder
+        for f in files_in_folder:
+            if f.lower().endswith('.zip'):
+                zip_path = os.path.join(folder_path, f)
+                info = await scan_zip(db, zip_path, seen_paths)
+                if info and info.get("file_count", 0) > 0:
+                    results.append(info)
+                    file_count += info.get("file_count", 0)
+        for f in folder_dir:
+            normalized_f = normalize_album_path(os.path.join(real_folder_path, f))
+            if file_count_dict.get(normalized_f):
+                file_count += file_count_dict[normalized_f]
+        file_count_dict[normalized_path] = file_count
         mtime, size = await stat_path(real_folder_path)
         name = os.path.basename(real_folder_path.rstrip("/\\")) or real_folder_path
         now = int(time.time())
@@ -147,18 +182,11 @@ async def scan_folder(
 
     if recursive:
         # Traverse all subdirectories; for each subdir (excluding root), create an album if it has images.
-        for root, dirs, files in os.walk(path):
+        for root, dirs, files in os.walk(path,False):
             # Albums for subfolders only ("path 下的每一个有图片的文件夹")
-            info = await upsert_folder_album(root, files)
+            info = await upsert_folder_album(root, dirs, files)
             if info:
                 results.append(info)
-            # Albums for zip files under this folder
-            for f in files:
-                if f.lower().endswith('.zip'):
-                    zip_path = os.path.join(root, f)
-                    info = await scan_zip(db, zip_path, seen_paths)
-                    if info and info.get("file_count", 0) > 0:
-                        results.append(info)
     else:
         # Only this folder itself
         try:
