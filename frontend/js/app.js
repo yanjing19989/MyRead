@@ -282,12 +282,6 @@ function renderAlbumTree() {
     const fileCountText = `${fmt(album.file_count || 0)} 页`;
     const sizeText = album.size != null ? ` · ${fmtSize(album.size)}` : '';
     meta.textContent = `${fileCountText}${sizeText}`;
-    // create a badge element for type and append inside name so it's on the same row
-    const tbadge = document.createElement('div');
-    tbadge.className = 'tbadge ' + (album.type === 'folder' ? 'folder' : album.type === 'zip' ? 'zip' : '');
-    tbadge.textContent = album.type || '';
-    // append badge into the name container so name and type are inline
-    name.appendChild(tbadge);
     row.append(toggle, icon, name, meta);
 
         const childrenBox = document.createElement('div');
