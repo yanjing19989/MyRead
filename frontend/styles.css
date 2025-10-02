@@ -57,19 +57,19 @@ input[type=text] {
 input[type=checkbox] { transform: translateY(1px); }
 button {
     background: var(--accent); color: white; border: none; border-radius: 8px;
-    padding: 10px 14px; cursor: pointer; font-weight: 600;
+    padding: 5px 14px; cursor: pointer; font-weight: 600;
 }
 button.secondary { background: #283044; color: var(--text); }
 button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 .hint { color: var(--muted); font-size: 12px; }
 
-main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px; }
+main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px; height: 100%;}
 @media (max-width: 1100px) {
     main { grid-template-columns: 1fr; }
 }
 
-.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: clip; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: clip; min-width: 0;}
 .panel h2 { margin: 0; font-size: 14px; padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--muted); letter-spacing: 0.3px; }
 .panelHeader { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--border); }
 .panelHeader h2 { margin: 0; font-size: 14px; color: var(--muted); }
@@ -98,15 +98,27 @@ main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px
     right: 0;
     bottom: 0;
     /* let it visually overlap the thumb and sit inside the card */
-    padding: 8px 10px;
+    padding: 8px;
     display: grid;
     /* glass effect */
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
     background: var(--glass-bg);
     border-radius: 0 0 11px 11px;
+    font-weight: 600;
 }
-.meta .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta-top { display: grid; grid-template-columns: 1fr auto; align-items: center; justify-content: space-between;}
+.meta .name {font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.type-badge {
+    display: inline-block;
+    padding: 0px 4px;
+    border-radius: 12px;
+    font-size: 13px;
+    border: 1.5px solid transparent;
+    text-align: center;
+}
+.type-badge.zip { border-color: var(--accent); color: var(--text); background: rgba(79,140,255,0.06); }
+.type-badge.folder { border-color: var(--warn); color: var(--text); background: rgba(255,176,32,0.06); }
 .meta .sub { color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; justify-content: center; }
 
 .browser { display: grid; gap: 10px; }
@@ -145,22 +157,6 @@ main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px
 .tname { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tmeta { color: var(--muted); font-size: 12px; }
 .tchildren { margin-left: 18px; border-left: 1px dashed #2a3246; padding-left: 10px; }
-
-/* Type badge for grid cards (overlay) */
-.meta { padding: 8px 10px; }
-/* make the top part of meta hold name and type on one row */
-.meta-top { display: flex; align-items: center; justify-content: space-between; }
-.meta .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.type-badge {
-    display: inline-block;
-    padding: 0px 4px;
-    border-radius: 12px;
-    font-size: 12px;
-    border: 1.5px solid transparent;
-    text-align: center;
-}
-.type-badge.zip { border-color: var(--accent); color: var(--text); background: rgba(79,140,255,0.06); }
-.type-badge.folder { border-color: var(--warn); color: var(--text); background: rgba(255,176,32,0.06); }
 
 /* Album context menu (used by frontend/js/app.js) */
 .album-context-menu {

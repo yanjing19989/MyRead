@@ -386,6 +386,7 @@ function bindUi() {
 // init
 (async function init(){
     sseConnect();
+    $('#recursiveCb').checked = true;
     bindUi();
     await loadAlbums();
 })();
