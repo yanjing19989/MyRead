@@ -120,7 +120,17 @@ main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px
 .rowi .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rowi .ops { display: flex; gap: 6px; }
 
-.log { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #0c0f14; padding: 8px; border-radius: 8px; max-height: 180px; overflow: auto; border: 1px solid var(--border); }
+.log {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: #0c0f14;
+    padding: 8px;
+    border-radius: 8px;
+    max-height: 180px;
+    overflow: auto;
+    border: 1px solid var(--border);
+    /* Prevent long unbroken lines from expanding the parent panel */
+    word-break: break-word;     /* break long words/URLs */
+}
 .log .ok { color: var(--ok); }
 .log .warn { color: var(--warn); }
 .log .err { color: var(--err); }

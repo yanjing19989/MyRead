@@ -92,12 +92,10 @@ async def get_or_create_thumb(
         if row and os.path.exists(row[0]):
             await db.execute("UPDATE thumbs SET last_access=? WHERE album_id=? AND key=?", (int(time.time()), album_id, key))
             await db.commit()
-            events.publish("thumb:hit", {"album_id": album_id, "key": key})
             return key, row[0]
 
     # (re)generate
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    events.publish("thumb:start", {"album_id": album_id, "entry": entry_path, "w": w, "h": h})
     img = _open_image_from_path(album_type, album_path, entry_path)
     img = _resize(img, w, h, fit)
     save_params = {"format": fmt.upper()}
@@ -123,7 +121,6 @@ async def get_or_create_thumb(
         (album_id, key, file_path, stat.st_size, img.width, img.height, now, now),
     )
     await db.commit()
-    events.publish("thumb:done", {"album_id": album_id, "key": key, "path": file_path})
     return key, file_path
 
 

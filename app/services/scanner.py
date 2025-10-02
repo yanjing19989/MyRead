@@ -177,7 +177,7 @@ async def scan_paths(db: aiosqlite.Connection, paths: list[str], options: ScanOp
     added_or_updated = 0
     details: list[dict] = []
     for p in paths:
-        abs_path = os.path.normpath(os.path.abspath(p))
+        abs_path = normalize_album_path(os.path.abspath(p))
         events.publish("scan:progress", {"path": abs_path, "status": "start"})
         if not os.path.exists(abs_path):
             events.publish("scan:progress", {"path": abs_path, "status": "skip", "reason": "not_exists"})
