@@ -12,6 +12,8 @@ class AppSettings(BaseModel):
     decode_concurrency: int = int(os.getenv("APP_DECODE_CONCURRENCY", 3))
     allow_recursive: bool = os.getenv("APP_ALLOW_RECURSIVE", "false").lower() == "true"
     max_input_pixels: int = int(os.getenv("APP_MAX_INPUT_PIXELS", 178_000_000))
+    # optional full path to LocalViewer executable on host (Windows). If empty, feature is disabled.
+    LocalViewer_path: str | None = os.getenv("APP_LocalViewer_PATH", "D:\\myprogram\\BandiView\\BandiView.exe")
 
 
 settings = AppSettings()

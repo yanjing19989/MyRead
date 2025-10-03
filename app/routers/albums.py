@@ -10,6 +10,9 @@ from ..services.scanner import scan_paths, ScanOptions, normalize_album_path
 from ..services.entries import list_entries
 from ..utils.fs import is_image_name, is_zip_name
 from natsort import natsorted, ns
+import subprocess
+import shlex
+from ..settings import settings as runtime_settings
 
 router = APIRouter(tags=["albums"])
 
@@ -410,3 +413,38 @@ async def delete_album(album_id: int, db: aiosqlite.Connection = Depends(get_db)
             pass
 
     return {"ok": True, "deleted": len(ids), "ids": ids}
+
+
+@router.post('/open-with-LocalViewer')
+async def open_with_LocalViewer(body: dict):
+    """Request body: { path: str, type: 'folder'|'zip' }
+
+    This will attempt to launch LocalViewer (Windows) to open the given folder or zip file.
+    The executable path is taken from runtime settings (APP_LocalViewer_PATH env or settings).
+    """
+    path = body.get('path')
+    typ = body.get('type')
+    if not path:
+        raise HTTPException(status_code=400, detail='path is required')
+    if typ not in ('folder', 'zip'):
+        raise HTTPException(status_code=400, detail='type must be "folder" or "zip"')
+
+    exe = runtime_settings.LocalViewer_path
+    if not exe:
+        raise HTTPException(status_code=400, detail='LocalViewer path not configured on server')
+
+    # basic path safety: require absolute path and avoid suspicious path traversal tokens
+    if not os.path.isabs(path):
+        raise HTTPException(status_code=400, detail='path must be absolute')
+
+    # on Windows, wrap path in quotes and launch LocalViewer; prefer subprocess.Popen so server doesn't block
+    try:
+        # For safety, do not run through shell; pass args list. LocalViewer accepts file/folder path as argument.
+        args = [exe, path]
+        # Use STARTF_USESHOWWINDOW to avoid console window when launching on Windows? We'll just Popen.
+        subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return {"ok": True}
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail=f'LocalViewer executable not found: {exe}')
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'failed to launch LocalViewer: {e}')

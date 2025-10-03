@@ -23,9 +23,11 @@ function ensureAlbumContextMenu() {
 
     const openItem = makeItem('打开相册', 'open');
     const delItem = makeItem('删除相册', 'delete');
+    const openWithLocalViewerItem = makeItem('用 LocalViewer 打开', 'open-with-LocalViewer');
 
     menu.appendChild(openItem);
     menu.appendChild(delItem);
+    menu.appendChild(openWithLocalViewerItem);
 
     document.body.appendChild(menu);
     albumContextMenu = menu;
@@ -51,6 +53,7 @@ function showAlbumContextMenu(x, y, album) {
     // wire actions
     const openIt = menu.querySelector('.ctx-item.open');
     const delIt = menu.querySelector('.ctx-item.delete');
+    const openWithLocalViewerIt = menu.querySelector('.ctx-item.open-with-LocalViewer');
     openIt.onclick = (ev) => { ev.stopPropagation(); hideAlbumContextMenu(); if (album?.path) openAlbum(album.path); };
     delIt.onclick = async (ev) => {
         ev.stopPropagation(); hideAlbumContextMenu();
@@ -63,6 +66,23 @@ function showAlbumContextMenu(x, y, album) {
         } catch (e) {
             logLine(`删除失败: ${e}`, 'err');
             alert('删除失败');
+        }
+    };
+    openWithLocalViewerIt.onclick = async (ev) => {
+        ev.stopPropagation(); hideAlbumContextMenu();
+        if (!album || !album.path) return alert('未指定要打开的相册路径');
+        try {
+            const payload = { path: album.path, type: album.type };
+            const res = await api('/api/open-with-LocalViewer', { method: 'POST', body: JSON.stringify(payload) });
+            if (res && res.ok) {
+                logLine(`已用 LocalViewer 打开: ${album.path}`, 'ok');
+            } else {
+                logLine(`启动 LocalViewer 返回: ${JSON.stringify(res)}`, 'warn');
+                alert('尝试打开时返回异常，请查看日志');
+            }
+        } catch (e) {
+            logLine(`启动 LocalViewer 失败: ${e}`, 'err');
+            alert('启动 LocalViewer 失败：' + e);
         }
     };
 }

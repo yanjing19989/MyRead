@@ -16,6 +16,17 @@ uvicorn app.main:app --reload --port 8000
 
 打开 http://127.0.0.1:8000/docs 查看接口文档。
 
+配置 LocalViewer (可选)
+-------------------
+
+如果希望在相册右键菜单中使用“用 LocalViewer 打开”功能，需要在运行服务的环境中设置 `APP_LocalViewer_PATH` 环境变量，指向本地 LocalViewer 可执行文件的绝对路径。例如（Windows PowerShell）:
+
+```
+$env:APP_LocalViewer_PATH = 'C:\\Program Files\\LocalViewer\\LocalViewer.exe'
+```
+
+功能行为：前端会向后端 `POST /api/open-with-LocalViewer` 发送相册路径，后端会尝试以子进程方式启动 LocalViewer 并打开该路径（仅在服务器主机上生效）。如果未配置该变量，功能会被禁用并返回错误信息。
+
 ## Albums API 更新
 
 - `GET /api/albums` 增加 `scope` 参数：
