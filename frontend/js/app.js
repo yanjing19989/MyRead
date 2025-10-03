@@ -475,6 +475,39 @@ function bindUi() {
     }
 }
 
+function setupSidebarControls() {
+    const leftSidebar = document.getElementById('leftSidebar');
+    const rightSidebar = document.getElementById('rightSidebar');
+    const toggleLeftBtn = document.getElementById('toggleLeftSidebar');
+    const toggleRightBtn = document.getElementById('toggleRightSidebar');
+    
+    // 左侧栏控制
+    toggleLeftBtn.addEventListener('click', () => {
+        if (leftSidebar.classList.contains('open')) {
+            leftSidebar.classList.remove('open');
+        } else {
+            leftSidebar.classList.toggle('open');
+        }
+    });
+    
+    // 右侧栏控制
+    toggleRightBtn.addEventListener('click', () => {
+        if (rightSidebar.classList.contains('open')) {
+            rightSidebar.classList.remove('open');
+        } else {
+            rightSidebar.classList.toggle('open');
+        }
+    });
+    
+    // ESC键关闭侧栏
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            leftSidebar.classList.remove('open');
+            rightSidebar.classList.remove('open');
+        }
+    });
+}
+
 async function refreshAlbums() {
     const btn = $('#refreshBtn');
     btn.disabled = true;
@@ -504,6 +537,7 @@ async function refreshAlbums() {
     }
     bindUi();
     updateLayoutToggleUI();
+    setupSidebarControls();
     await refreshAlbums();
 })();
 

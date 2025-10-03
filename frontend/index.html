@@ -7,50 +7,67 @@
 	<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-	<header>
-		<h1>MyRead</h1>
-		<div class="grow row">
-			<input id="pathInput" type="text" placeholder="输入要扫描的绝对路径，多个用 ; 分隔，例如 D:\\Books; E:\\Comics 或 C:/Comics" />
-			<label class="row hint"><input id="recursiveCb" type="checkbox" /> 递归</label>
+
+	<button class="sidebar-toggle toggle-left" id="toggleLeftSidebar">📁</button>
+    <button class="sidebar-toggle toggle-right" id="toggleRightSidebar">⚙️</button>
+
+	<h1 class="main-title">MyRead</h1>
+
+	<!-- 左侧栏：目录树 -->
+    <div class="sidebar" id="leftSidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title-left">相册树状目录</div>
+        </div>
+		<div class="body">
+			<div class="row">
+				<input id="treeSearch" type="text" placeholder="搜索相册名称或路径..." />
+			</div>
+			<div id="treeEmpty" class="hint">仅显示已添加的相册（按路径层级组织）。</div>
+			<div id="albumTree" class="tree"></div>
+			<div style="margin-top:10px">
+				<div class="hint" style="margin-bottom:6px">扫描进度</div>
+				<div class="log" id="log"></div>
+			</div>
 		</div>
-		<button id="scanBtn">添加路径并扫描</button>
-	</header>
+    </div>
+
+	<!-- 右侧栏：设置 -->
+    <div class="sidebar right" id="rightSidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">设置</div>
+        </div>
+		<div class="body">
+			<div class="row">
+				<input id="pathInput" type="text" placeholder="输入要扫描的绝对路径，多个用 ; 分隔，例如 D:\\Books; E:\\Comics 或 C:/Comics" />
+			</div>
+			<div class="row">
+				<label class="hint"><input id="recursiveCb" type="checkbox" /> 递归</label>
+				<button id="scanBtn">添加路径并扫描</button>
+			</div>
+		</div>
+    </div>
 
 	<main>
-		<section class="panel" id="albumsPanel">
-			<div class="panelHeader">
-				<h2>相册</h2>
-				<div class="panelActions">
-					<button class="ghost" id="layoutToggleBtn" aria-pressed="false">横向模式：关</button>
-					<button class="secondary" id="refreshBtn">刷新</button>
+	<section class="panel" id="albumsPanel">
+		<div class="panelHeader">
+			<h2>相册</h2>
+			<div class="panelActions">
+				<button class="ghost" id="layoutToggleBtn" aria-pressed="false">横向模式：关</button>
+				<button class="secondary" id="refreshBtn">刷新</button>
+			</div>
+		</div>
+		<div class="body">
+			<div class="row" id="albumsNav" style="margin: 0 0 8px 0; display:none; align-items:center; justify-content: space-between;">
+				<div class="row" style="gap:8px; align-items:center;">
+					<button class="secondary" id="albumsBackBtn">返回上级</button>
+					<div class="hint" id="albumsCrumb"></div>
 				</div>
 			</div>
-			<div class="body">
-				<div class="row" id="albumsNav" style="margin: 0 0 8px 0; display:none; align-items:center; justify-content: space-between;">
-					<div class="row" style="gap:8px; align-items:center;">
-						<button class="secondary" id="albumsBackBtn">返回上级</button>
-						<div class="hint" id="albumsCrumb"></div>
-					</div>
-				</div>
-				<div class="albums" id="albumsGrid"></div>
-			</div>
-		</section>
-
-		<section class="panel" id="browserPanel">
-			<h2>相册树状目录</h2>
-			<div class="body">
-				<div class="row" style="gap:8px; align-items:center; margin-bottom:8px;">
-					<input id="treeSearch" type="text" placeholder="搜索相册名称或路径..." />
-				</div>
-				<div id="treeEmpty" class="hint">仅显示已添加的相册（按路径层级组织）。</div>
-				<div id="albumTree" class="tree"></div>
-				<div style="margin-top:10px">
-					<div class="hint" style="margin-bottom:6px">扫描进度</div>
-					<div class="log" id="log"></div>
-				</div>
-			</div>
-		</section>
+			<div class="albums" id="albumsGrid"></div>
+		</div>
+	</section>
 	</main>
+
 
 	<script type="module" src="js/app.js"></script>
 </body>
