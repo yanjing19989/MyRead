@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 import aiosqlite
 
 from ..db import get_db
+from ..settings import settings
 from ..services.thumbnails import get_or_create_thumb
 from ..services.entries import first_entry
 
@@ -26,7 +27,7 @@ async def get_cover(
     h: int = 960,
     fit: str = "cover",
     fmt: str = "webp",
-    q: int | None = None,
+    q: int | None = settings.default_quality,
     db: aiosqlite.Connection = Depends(get_db),
 ):
     album = await _get_album(db, album_id)
@@ -42,7 +43,7 @@ async def get_cover(
             if cp.endswith(f"{w}_{h}.{fmt}"):
                 return FileResponse(cp, media_type="image/*") 
     key = f"{album_id}_{fit}_{q}_{w}_{h}.{fmt}"
-        # try DB first
+     # try DB first
     async with db.execute("SELECT file_path FROM thumbs WHERE album_id=? AND key=?", (album_id, key)) as cur:
         row = await cur.fetchone()
         if row and os.path.exists(row[0]):
@@ -70,7 +71,6 @@ async def get_cover(
                 break
         if not entry_path:
             raise HTTPException(status_code=404, detail="no images in album or its children")
-
     _, path = await get_or_create_thumb(
         db,
         album_id=album["id"],

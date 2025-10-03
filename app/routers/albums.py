@@ -329,14 +329,15 @@ async def refresh_albums(db: aiosqlite.Connection = Depends(get_db)):
     - For zip albums: path must be an existing regular file.
     Deletions cascade to thumbs via FK.
     """
-    async with db.execute("SELECT id, type, path FROM albums") as cur:
+    async with db.execute("SELECT id, type, path, mtime FROM albums") as cur:
         rows = await cur.fetchall()
     checked = len(rows)
     removed_ids: list[int] = []
-    for album_id, typ, p in rows:
+    for album_id, typ, p, mtime in rows:
         try:
             if typ == "folder":
                 ok = os.path.isdir(p)
+
             elif typ == "zip":
                 ok = os.path.isfile(p)
             else:
@@ -346,6 +347,12 @@ async def refresh_albums(db: aiosqlite.Connection = Depends(get_db)):
         if not ok:
             await db.execute("DELETE FROM albums WHERE id=?", (album_id,))
             removed_ids.append(album_id)
+        else:
+            stat = os.stat(p)
+            if int(stat.st_mtime) != mtime:
+                await scan_paths(
+                    db, [p], ScanOptions(recursive=True)
+                )
     if removed_ids:
         await db.commit()
     return {"checked": checked, "removed": len(removed_ids), "ids": removed_ids}

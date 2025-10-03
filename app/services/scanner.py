@@ -76,8 +76,9 @@ async def scan_zip(db: aiosqlite.Connection, path: str, seen_paths: Set[str]) ->
     real_path = os.path.normpath(os.path.abspath(path))
     key = album_path_key(real_path)
     normalized_path = normalize_album_path(real_path)
+    updateflag = False
     if key and key in seen_paths:
-        return None
+        updateflag = True
     mtime, size = await stat_path(real_path)
     name = basename_without_ext(real_path)
     file_count = 0
@@ -91,18 +92,33 @@ async def scan_zip(db: aiosqlite.Connection, path: str, seen_paths: Set[str]) ->
     except zipfile.BadZipFile:
         return None
     now = int(time.time())
-    await db.execute(
-        """
-        INSERT INTO albums(type, path, name, mtime, size, file_count, added_at)
-        VALUES('zip', ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(path) DO UPDATE SET
-            mtime=excluded.mtime,
-            size=excluded.size,
-            file_count=excluded.file_count,
-            name=excluded.name
-        """,
-        (normalized_path, name, mtime, size, file_count, now),
-    )
+    if updateflag:
+        if file_count == 0:
+            return None
+        await db.execute(
+            """
+            UPDATE albums SET
+                mtime=?,
+                size=?,
+                file_count=?,
+                name=?
+            WHERE path=?
+            """,
+            (mtime, size, file_count, name, key),
+        )
+    else:
+        await db.execute(
+            """
+            INSERT INTO albums(type, path, name, mtime, size, file_count, added_at)
+            VALUES('zip', ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(path) DO UPDATE SET
+                mtime=excluded.mtime,
+                size=excluded.size,
+                file_count=excluded.file_count,
+                name=excluded.name
+            """,
+            (normalized_path, name, mtime, size, file_count, now),
+        )
     if key:
         seen_paths.add(key)
     return {
@@ -137,8 +153,9 @@ async def scan_folder(
         real_folder_path = os.path.normpath(os.path.abspath(folder_path))
         normalized_path = normalize_album_path(real_folder_path)
         key = album_path_key(normalized_path)
+        updateflag = False
         if key and key in seen_paths:
-            return None
+            updateflag = True
         images = [f for f in files_in_folder if is_image_name(f)]
         file_count = len(images)
         # Albums for zip files under this folder
@@ -157,18 +174,33 @@ async def scan_folder(
         mtime, size = await stat_path(real_folder_path)
         name = os.path.basename(real_folder_path.rstrip("/\\")) or real_folder_path
         now = int(time.time())
-        await db.execute(
-            """
-            INSERT INTO albums(type, path, name, mtime, size, file_count, added_at)
-            VALUES('folder', ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(path) DO UPDATE SET
-                mtime=excluded.mtime,
-                size=excluded.size,
-                file_count=excluded.file_count,
-                name=excluded.name
-            """,
-            (normalized_path, name, mtime, size, file_count, now),
-        )
+        if updateflag:
+            if file_count == 0:
+                return None
+            await db.execute(
+                """
+                UPDATE albums SET
+                    mtime=?,
+                    size=?,
+                    file_count=?,
+                    name=?
+                WHERE path=?
+                """,
+                (mtime, size, file_count, name, key),
+            )
+        else:
+            await db.execute(
+                """
+                INSERT INTO albums(type, path, name, mtime, size, file_count, added_at)
+                VALUES('folder', ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(path) DO UPDATE SET
+                    mtime=excluded.mtime,
+                    size=excluded.size,
+                    file_count=excluded.file_count,
+                    name=excluded.name
+                """,
+                (normalized_path, name, mtime, size, file_count, now),
+            )
         if key:
             seen_paths.add(key)
         return {

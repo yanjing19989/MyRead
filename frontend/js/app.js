@@ -408,6 +408,11 @@ function bindTreeSearch() {
 
 async function scanPaths(paths, recursive) {
     if (!paths || !paths.length) return;
+    // 如果path为磁盘根目录C/D，弹出警告
+    const np = normPath(paths.toString().trim());
+    if (np === '/' || /^[a-zA-Z]:[\/\\]?$/.test(np)) {
+        return alert('禁止扫描磁盘根目录，请指定具体路径');
+    }
     $('#scanBtn').disabled = true;
     try {
         await api('/api/albums/scan', {
@@ -439,18 +444,7 @@ function bindUi() {
 
     // refresh button (now inside albums panel)
     $('#refreshBtn').onclick = async () => {
-        const btn = $('#refreshBtn');
-        btn.disabled = true;
-        try {
-            const res = await api('/api/albums/refresh', { method: 'POST' });
-            logLine(`刷新完成: 检查=${res.checked} 删除=${res.removed}`, res.removed ? 'warn' : 'ok');
-            await loadAlbums();
-        } catch (e) {
-            logLine(`刷新失败: ${e}`, 'err');
-            alert('刷新失败');
-        } finally {
-            btn.disabled = false;
-        }
+        await refreshAlbums();
     };
 
     const layoutBtn = $('#layoutToggleBtn');
@@ -460,6 +454,21 @@ function bindUi() {
         };
     }
 }
+
+async function refreshAlbums() {
+    const btn = $('#refreshBtn');
+    btn.disabled = true;
+    try {
+        const res = await api('/api/albums/refresh', { method: 'POST' });
+        logLine(`刷新完成: 检查=${res.checked} 删除=${res.removed}`, res.removed ? 'warn' : 'ok');
+        await loadAlbums();
+    } catch (e) {
+        logLine(`刷新失败: ${e}`, 'err');
+        alert('刷新失败');
+    } finally {
+        btn.disabled = false;
+    }
+};
 
 // init
 (async function init(){
@@ -475,7 +484,7 @@ function bindUi() {
     }
     bindUi();
     updateLayoutToggleUI();
-    await loadAlbums();
+    await refreshAlbums();
 })();
 
 export { loadAlbums, openAlbum };
