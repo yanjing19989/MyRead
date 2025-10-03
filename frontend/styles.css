@@ -85,7 +85,7 @@ body {
 .sidebar {
   position: fixed;
   top: 0; bottom: 0;
-  width: 400px;
+  width: 600px;
   background: var(--glass-bg);
   backdrop-filter: saturate(140%) blur(5px);
   -webkit-backdrop-filter: saturate(140%) blur(5px);

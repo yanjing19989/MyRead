@@ -11,7 +11,7 @@ const fmtSize = (bytes) => {
         val = val / 1024;
         u++;
     }
-    return `${val.toFixed(1)} ${units[u]}`;
+    return `${val.toFixed(1)}${units[u]}`;
 };
 const api = async (url, opts={}) => {
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });

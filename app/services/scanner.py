@@ -161,13 +161,13 @@ async def scan_folder(
             normalized_f = normalize_album_path(os.path.join(real_folder_path, f))
             if file_count_dict.get(normalized_f):
                 file_count += file_count_dict[normalized_f]
+        if file_count == 0:
+            return None
         file_count_dict[key] = file_count
         mtime, size = await stat_path(real_folder_path)
         name = os.path.basename(real_folder_path.rstrip("/\\")) or real_folder_path
         now = int(time.time())
         if updateflag:
-            if file_count == 0:
-                return None
             await db.execute(
                 """
                 UPDATE albums SET

@@ -258,8 +258,8 @@ function renderAlbums() {
 
         const sub = document.createElement('div');
         sub.className = 'sub';
-        const fileText = `页数:\n${fmt(album.file_count)}`;
-        const sizeText = album.size != null ? `大小:\n${fmtSize(album.size)}` : '';
+        const fileText = `页数\n${fmt(album.file_count)}`;
+        const sizeText = album.size != null ? `大小\n${fmtSize(album.size)}` : '';
         sub.textContent = `${fileText}\n${sizeText}`;
 
         meta.append(metaTop, sub);
