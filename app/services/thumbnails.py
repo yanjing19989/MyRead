@@ -11,7 +11,6 @@ import aiosqlite
 from PIL import Image, ImageOps
 
 from ..settings import settings
-from ..utils.hashing import cache_path
 from ..utils.fs import is_image_name
 from ..utils.events import events
 
@@ -83,8 +82,8 @@ async def get_or_create_thumb(
     quality: int | None = None,
 ) -> tuple[str, str]:
     q = int(quality or settings.default_quality)
-    key = f"{album_id}|{entry_path or 'cover'}|{w}|{h}|{fit}|{fmt}|{q}|v1"
-    file_path = cache_path(os.path.join(settings.cache_dir, "thumbs"), key, fmt)
+    key = f"{album_id}_{fit}_{q}_{w}_{h}.{fmt}"
+    file_path = os.path.join(settings.cache_dir, "thumbs", key)
 
     # try DB first
     async with db.execute("SELECT file_path FROM thumbs WHERE album_id=? AND key=?", (album_id, key)) as cur:

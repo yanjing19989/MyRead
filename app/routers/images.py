@@ -39,7 +39,15 @@ async def get_cover(
     if cp:
         # 绝对路径：视为外部封面
         if os.path.isabs(cp) and os.path.exists(cp):
-            return FileResponse(cp, media_type="image/*")
+            if cp.endswith(f"{w}_{h}.{fmt}"):
+                return FileResponse(cp, media_type="image/*") 
+    key = f"{album_id}_{fit}_{q}_{w}_{h}.{fmt}"
+        # try DB first
+    async with db.execute("SELECT file_path FROM thumbs WHERE album_id=? AND key=?", (album_id, key)) as cur:
+        row = await cur.fetchone()
+        if row and os.path.exists(row[0]):
+            return FileResponse(row[0], media_type="image/*")
+    print("not found in thumbs, generate new")
     entry_path = await first_entry(db, album_id)
     if not entry_path and album["type"] == "folder":
         parent_path = album["path"]

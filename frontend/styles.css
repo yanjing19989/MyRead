@@ -61,6 +61,11 @@ button {
 }
 button.secondary { background: #283044; color: var(--text); }
 button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+button.ghost.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(79,140,255,0.12);
+}
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 .hint { color: var(--muted); font-size: 12px; }
 
@@ -80,14 +85,23 @@ main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px
     display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 12px;
 }
+.albums.horizontal {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
 .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
-    display: flex; flex-direction: column; min-height: 240px; position: relative;
+    display: flex; flex-direction: column; position: relative;
 }
 .card.is-folder { cursor: pointer; transition: transform 0.12s ease, border-color 0.12s ease; }
 .card.is-folder:hover { transform: translateY(-2px); border-color: var(--accent); }
+.card.horizontal {
+    flex-direction: row; position: relative;
+}
 .thumb {
     aspect-ratio: 3/4; width: 100%; background: #0c0f14; display: grid; place-items: center;
+}
+.card.horizontal .thumb {
+    aspect-ratio: 3/2;
 }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -113,13 +127,40 @@ main { display: grid; grid-template-columns: 1fr 0.4fr; gap: 14px; padding: 14px
     display: inline-block;
     padding: 0px 4px;
     border-radius: 12px;
-    font-size: 13px;
+    font-size: 12px;
     border: 1.5px solid transparent;
     text-align: center;
 }
 .type-badge.zip { border-color: var(--accent); color: var(--text); background: rgba(79,140,255,0.06); }
 .type-badge.folder { border-color: var(--warn); color: var(--text); background: rgba(255,176,32,0.06); }
 .meta .sub { color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; justify-content: center; }
+.card.horizontal .meta {
+    position: absolute;
+    left: auto;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 50px; /* 你可以自定义宽度 */
+    z-index: 1;
+    border-radius: 0 11px 11px 0;
+}
+.card.horizontal .meta-top {
+    grid-template-columns: auto 1fr;
+    writing-mode: vertical-rl;
+}
+.card.horizontal .type-badge {
+    writing-mode: horizontal-tb;
+    font-size: 10px;
+    padding: 0px 2px;
+    margin: 0 0 8px;
+}
+.card.horizontal .meta .sub {
+    white-space: pre-wrap;
+    font-size: 12px;
+    word-break: break-word;
+    text-align: center;
+    align-items: end;
+}
 
 .browser { display: grid; gap: 10px; }
 .crumbs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }

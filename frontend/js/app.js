@@ -1,5 +1,6 @@
 import { $, $$, fmt, fmtSize, api, normPath, lowerPath, parentDirPath, state, logLine, sseConnect } from './lib.js';
 
+const LAYOUT_STORAGE_KEY = 'myread.horizontalMode';
 let treeSearchTimer = null;
 // ----- context menu for albums -----
 let albumContextMenu = null;
@@ -80,6 +81,32 @@ function hideAlbumContextMenu() {
 }
 
 
+function updateLayoutToggleUI() {
+    const btn = $('#layoutToggleBtn');
+    if (!btn) return;
+    const on = !!state.horizontalMode;
+    btn.textContent = `横向模式：${on ? '开' : '关'}`;
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.classList.toggle('active', on);
+}
+
+function setHorizontalMode(next, options = {}) {
+    const desired = !!next;
+    if (!options.force && state.horizontalMode === desired) {
+        updateLayoutToggleUI();
+        return;
+    }
+    state.horizontalMode = desired;
+    try {
+        localStorage.setItem(LAYOUT_STORAGE_KEY, desired ? '1' : '0');
+    } catch (err) {
+        console.warn('无法写入布局偏好', err);
+    }
+    updateLayoutToggleUI();
+    renderAlbums();
+}
+
+
 async function loadAlbums(options = {}) {
     const { forceRoot = false } = options;
     const keyword = $('#treeSearch')?.value?.trim() || '';
@@ -144,6 +171,9 @@ function openAlbum(path) {
 function renderAlbums() {
     const grid = $('#albumsGrid');
     if (!grid) return;
+    updateLayoutToggleUI();
+    const isHorizontal = !!state.horizontalMode;
+    grid.classList.toggle('horizontal', isHorizontal);
     grid.innerHTML = '';
     const items = state.gridItems || [];
     if (!items.length) {
@@ -163,19 +193,60 @@ function renderAlbums() {
     for (const album of items) {
         const card = document.createElement('div');
         card.className = 'card';
-        const coverUrl = `/api/albums/${album.id}/cover?w=300&h=400&fit=cover`;
-        card.innerHTML = `
-            <div class="thumb"><img loading="lazy" src="${coverUrl}" alt="cover"></div>
-            <div class="meta">
-                <div class="meta-top">
-                    <div class="name" title="${album.name}">${album.name}</div>
-                    <div class="type-badge ${album.type === 'folder' ? 'folder' : album.type === 'zip' ? 'zip' : ''}">${album.type || ''}</div>
-                </div>
-                <div class="sub">页数: ${fmt(album.file_count)}${album.size != null ? ' · 大小: ' + fmtSize(album.size) : ''}</div>
-            </div>
-        `;
         if (album.type === 'folder') {
             card.classList.add('is-folder');
+        }
+        if (isHorizontal) {
+            card.classList.add('horizontal');
+        }
+
+        const coverUrl = `/api/albums/${album.id}/cover?w=${isHorizontal ? 450 : 300}&h=${isHorizontal ? 300 : 400}&fit=cover`;
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb';
+        const img = document.createElement('img');
+        img.loading = 'lazy';
+        img.src = coverUrl;
+        img.alt = 'cover';
+        thumb.appendChild(img);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        if (isHorizontal) meta.classList.add('meta-inline');
+
+        const metaTop = document.createElement('div');
+        metaTop.className = 'meta-top';
+
+        const displayName = album.name || (album.path ? album.path.split('/').pop() : '未命名相册');
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.title = displayName;
+        name.textContent = displayName;
+
+        const badge = document.createElement('div');
+        badge.className = 'type-badge';
+        if (album.type === 'folder') badge.classList.add('folder');
+        else if (album.type === 'zip') badge.classList.add('zip');
+        badge.textContent = album.type || '';
+
+        
+        if (isHorizontal) {
+            metaTop.append(badge, name);
+        }
+        else {
+            metaTop.append(name, badge);
+        }
+
+        const sub = document.createElement('div');
+        sub.className = 'sub';
+        const fileText = `页数:\n${fmt(album.file_count)}`;
+        const sizeText = album.size != null ? `大小:\n${fmtSize(album.size)}` : '';
+        sub.textContent = `${fileText}\n${sizeText}`;
+
+        meta.append(metaTop, sub);
+
+        card.append(thumb, meta);
+
+        if (album.type === 'folder') {
             card.onclick = () => openAlbum(album.path);
         }
         // bind right-click context menu for album actions
@@ -381,13 +452,29 @@ function bindUi() {
             btn.disabled = false;
         }
     };
+
+    const layoutBtn = $('#layoutToggleBtn');
+    if (layoutBtn) {
+        layoutBtn.onclick = () => {
+            setHorizontalMode(!state.horizontalMode);
+        };
+    }
 }
 
 // init
 (async function init(){
     sseConnect();
     $('#recursiveCb').checked = true;
+    try {
+        const stored = localStorage.getItem(LAYOUT_STORAGE_KEY);
+        if (stored === '1' || stored === '0') {
+            state.horizontalMode = stored === '1';
+        }
+    } catch (err) {
+        console.warn('读取布局偏好失败', err);
+    }
     bindUi();
+    updateLayoutToggleUI();
     await loadAlbums();
 })();
 
