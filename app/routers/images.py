@@ -43,7 +43,7 @@ async def get_cover(
             if cp.endswith(f"{w}_{h}.{fmt}"):
                 return FileResponse(cp, media_type="image/*") 
     key = f"{album_id}_{fit}_{q}_{w}_{h}.{fmt}"
-     # try DB first
+    # try DB first
     async with db.execute("SELECT file_path FROM thumbs WHERE album_id=? AND key=?", (album_id, key)) as cur:
         row = await cur.fetchone()
         if row and os.path.exists(row[0]):
@@ -62,7 +62,8 @@ async def get_cover(
         for cid, ctype, cpath, cover in rows:
             if cover:
                 if os.path.isabs(cover) and os.path.exists(cover):
-                    return FileResponse(cover, media_type="image/*")
+                    if cover.endswith(f"{w}_{h}.{fmt}"):
+                        return FileResponse(cover, media_type="image/*")
             child_entry = await first_entry(db, cid)
             if child_entry:
                 entry_path = child_entry
