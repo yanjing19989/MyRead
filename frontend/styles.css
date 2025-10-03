@@ -287,3 +287,8 @@ main { padding: 11px 20px; height: 100%;}
 .album-context-menu .ctx-item { padding: 6px 12px; cursor: pointer; user-select: none; white-space: nowrap; }
 .album-context-menu .ctx-item:hover { background: var(--panel); }
 .album-context-menu .ctx-item.delete { color: var(--err); font-weight: 600; }
+
+/* 滚动条微样式*/
+*::-webkit-scrollbar { width: 6px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: #2a3142; border-radius: 999px; border: 1px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-track { background: transparent; }
