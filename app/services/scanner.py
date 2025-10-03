@@ -54,19 +54,12 @@ def normalize_album_path(path: str) -> str:
     return norm
 
 
-def album_path_key(path: str) -> str:
-    norm = normalize_album_path(path)
-    if os.name == "nt":
-        return norm.lower()
-    return norm
-
-
 async def _load_existing_album_keys(db: aiosqlite.Connection) -> Set[str]:
     existing: Set[str] = set()
     async with db.execute("SELECT path FROM albums") as cur:
         rows = await cur.fetchall()
     for (path,) in rows:
-        key = album_path_key(path)
+        key = normalize_album_path(path)
         if key:
             existing.add(key)
     return existing
@@ -74,8 +67,7 @@ async def _load_existing_album_keys(db: aiosqlite.Connection) -> Set[str]:
 
 async def scan_zip(db: aiosqlite.Connection, path: str, seen_paths: Set[str]) -> dict | None:
     real_path = os.path.normpath(os.path.abspath(path))
-    key = album_path_key(real_path)
-    normalized_path = normalize_album_path(real_path)
+    key = normalize_album_path(real_path)
     updateflag = False
     if key and key in seen_paths:
         updateflag = True
@@ -117,12 +109,12 @@ async def scan_zip(db: aiosqlite.Connection, path: str, seen_paths: Set[str]) ->
                 file_count=excluded.file_count,
                 name=excluded.name
             """,
-            (normalized_path, name, mtime, size, file_count, now),
+            (key, name, mtime, size, file_count, now),
         )
     if key:
         seen_paths.add(key)
     return {
-        "path": normalized_path,
+        "path": key,
         "type": "zip",
         "name": name,
         "mtime": mtime,
@@ -151,8 +143,7 @@ async def scan_folder(
     async def upsert_folder_album(folder_path: str, folder_dir: list[str], files_in_folder: list[str]) -> dict | None:
         # count images among the provided file names (not recursing)
         real_folder_path = os.path.normpath(os.path.abspath(folder_path))
-        normalized_path = normalize_album_path(real_folder_path)
-        key = album_path_key(normalized_path)
+        key = normalize_album_path(real_folder_path)
         updateflag = False
         if key and key in seen_paths:
             updateflag = True
@@ -170,7 +161,7 @@ async def scan_folder(
             normalized_f = normalize_album_path(os.path.join(real_folder_path, f))
             if file_count_dict.get(normalized_f):
                 file_count += file_count_dict[normalized_f]
-        file_count_dict[normalized_path] = file_count
+        file_count_dict[key] = file_count
         mtime, size = await stat_path(real_folder_path)
         name = os.path.basename(real_folder_path.rstrip("/\\")) or real_folder_path
         now = int(time.time())
@@ -199,12 +190,12 @@ async def scan_folder(
                     file_count=excluded.file_count,
                     name=excluded.name
                 """,
-                (normalized_path, name, mtime, size, file_count, now),
+                (key, name, mtime, size, file_count, now),
             )
         if key:
             seen_paths.add(key)
         return {
-            "path": normalized_path,
+            "path": key,
             "type": "folder",
             "name": name,
             "mtime": mtime,
