@@ -68,11 +68,18 @@ async def _load_existing_album_keys(db: aiosqlite.Connection) -> Set[str]:
 async def scan_zip(db: aiosqlite.Connection, path: str, seen_paths: Set[str]) -> dict | None:
     real_path = os.path.normpath(os.path.abspath(path))
     key = normalize_album_path(real_path)
-    updateflag = False
-    if key and key in seen_paths:
-        updateflag = True
     mtime, size = await stat_path(real_path)
     name = basename_without_ext(real_path)
+    updateflag = False
+    if key and key in seen_paths:
+        # already seen, check if needs update
+        async with db.execute("SELECT id, mtime, file_count FROM albums WHERE path=?", (key,)) as cur:
+            row = await cur.fetchone()
+            album_id, album_mtime, file_count = row[0], row[1], row[2]
+            if album_mtime == mtime:
+                return {"path": key, "type": "zip", "name": name, "mtime": mtime, "size": size, "file_count": file_count}
+            updateflag = True
+    # count image files in the zip
     file_count = 0
     try:
         with zipfile.ZipFile(real_path, 'r') as zf:
@@ -83,22 +90,24 @@ async def scan_zip(db: aiosqlite.Connection, path: str, seen_paths: Set[str]) ->
             file_count = len(images)
     except zipfile.BadZipFile:
         return None
-    now = int(time.time())
+    if file_count == 0:
+        return None
     if updateflag:
-        if file_count == 0:
-            return None
         await db.execute(
             """
             UPDATE albums SET
                 mtime=?,
                 size=?,
                 file_count=?,
+                cover_path=NULL,
                 name=?
-            WHERE path=?
+            WHERE id=?
             """,
-            (mtime, size, file_count, name, key),
+            (mtime, size, file_count, name, album_id),
         )
+        await db.execute("DELETE FROM thumbs WHERE album_id=?", (album_id,))
     else:
+        now = int(time.time())
         await db.execute(
             """
             INSERT INTO albums(type, path, name, mtime, size, file_count, added_at)
@@ -111,8 +120,8 @@ async def scan_zip(db: aiosqlite.Connection, path: str, seen_paths: Set[str]) ->
             """,
             (key, name, mtime, size, file_count, now),
         )
-    if key:
-        seen_paths.add(key)
+        if key:
+            seen_paths.add(key)
     return {
         "path": key,
         "type": "zip",
@@ -144,8 +153,15 @@ async def scan_folder(
         # count images among the provided file names (not recursing)
         real_folder_path = os.path.normpath(os.path.abspath(folder_path))
         key = normalize_album_path(real_folder_path)
+        mtime, size = await stat_path(real_folder_path)
+        name = os.path.basename(real_folder_path.rstrip("/\\")) or real_folder_path
         updateflag = False
         if key and key in seen_paths:
+            async with db.execute("SELECT id, mtime, file_count FROM albums WHERE path=?", (key,)) as cur:
+                row = await cur.fetchone()
+                album_id, album_mtime, file_count = row[0], row[1], row[2]
+            if album_mtime == mtime:
+                return {"path": key, "type": "folder", "name": name, "mtime": mtime, "size": size, "file_count": file_count}
             updateflag = True
         images = [f for f in files_in_folder if is_image_name(f)]
         file_count = len(images)
@@ -163,10 +179,7 @@ async def scan_folder(
                 file_count += file_count_dict[normalized_f]
         if file_count == 0:
             return None
-        file_count_dict[key] = file_count
-        mtime, size = await stat_path(real_folder_path)
-        name = os.path.basename(real_folder_path.rstrip("/\\")) or real_folder_path
-        now = int(time.time())
+        file_count_dict[key] = file_count        
         if updateflag:
             await db.execute(
                 """
@@ -174,12 +187,15 @@ async def scan_folder(
                     mtime=?,
                     size=?,
                     file_count=?,
+                    cover_path=NULL,
                     name=?
-                WHERE path=?
+                WHERE id=?
                 """,
-                (mtime, size, file_count, name, key),
+                (mtime, size, file_count, name, album_id),
             )
+            await db.execute("DELETE FROM thumbs WHERE album_id=?", (album_id,))
         else:
+            now = int(time.time())
             await db.execute(
                 """
                 INSERT INTO albums(type, path, name, mtime, size, file_count, added_at)
@@ -192,8 +208,8 @@ async def scan_folder(
                 """,
                 (key, name, mtime, size, file_count, now),
             )
-        if key:
-            seen_paths.add(key)
+            if key:
+                seen_paths.add(key)
         return {
             "path": key,
             "type": "folder",
