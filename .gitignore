@@ -32,3 +32,11 @@ Thumbs.db
 *.sqlite3
 *.db
 cache/
+
+# CI/CD artifacts
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+*.tar.gz
+safety-report.json
