@@ -6,11 +6,6 @@ Browser History Browser - Python Backend Server
 
 import uvicorn
 import sys
-from pathlib import Path
-
-# 添加后端路径到系统路径
-backend_path = Path(__file__).parent / "app"
-sys.path.insert(0, str(backend_path))
 
 def main():
     """启动服务器"""

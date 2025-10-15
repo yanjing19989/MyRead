@@ -4,7 +4,7 @@ import os
 import time
 import zipfile
 from dataclasses import dataclass
-from typing import Iterable, Set
+from typing import Set
 
 import aiosqlite
 from natsort import natsorted, ns
