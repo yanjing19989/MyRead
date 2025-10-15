@@ -331,7 +331,7 @@ python server.py
 
 ## 🔄 CI/CD
 
-本项目使用 GitHub Actions 进行持续集成和部署：
+本项目使用 GitHub Actions 进行持续集成和部署。详细文档请参考 [CI_CD.md](CI_CD.md)。
 
 ### CI 工作流
 - **代码质量检查**：使用 black、isort、flake8 和 mypy 进行代码风格和类型检查
