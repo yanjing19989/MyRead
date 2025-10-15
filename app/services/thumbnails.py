@@ -1,18 +1,13 @@
 from __future__ import annotations
-import io
-import json
 import os
 import time
 import zipfile
-from dataclasses import dataclass
 from typing import Literal, Optional
 
 import aiosqlite
 from PIL import Image, ImageOps
 
 from ..settings import settings
-from ..utils.fs import is_image_name
-from ..utils.events import events
 
 
 FitMode = Literal["cover", "contain"]
