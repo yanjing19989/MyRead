@@ -1,7 +1,6 @@
 from __future__ import annotations
 import aiosqlite
 import os
-from pathlib import Path
 
 DB_PATH = os.path.abspath("myread.sqlite3")
 

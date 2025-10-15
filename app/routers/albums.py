@@ -1,17 +1,13 @@
 from __future__ import annotations
 from typing import Literal, Optional
 import os
-import json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 import aiosqlite
 
 from ..db import get_db
 from ..services.scanner import scan_paths, ScanOptions, normalize_album_path
 from ..services.entries import list_entries
-from ..utils.fs import is_image_name, is_zip_name
-from natsort import natsorted, ns
 import subprocess
-import shlex
 from ..settings import settings as runtime_settings
 
 router = APIRouter(tags=["albums"])
