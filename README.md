@@ -1,5 +1,9 @@
 # MyRead - 本地相册浏览器
 
+[![CI](https://github.com/yanjing19989/MyRead/actions/workflows/ci.yml/badge.svg)](https://github.com/yanjing19989/MyRead/actions/workflows/ci.yml)
+[![Build](https://github.com/yanjing19989/MyRead/actions/workflows/build.yml/badge.svg)](https://github.com/yanjing19989/MyRead/actions/workflows/build.yml)
+[![Code Quality](https://github.com/yanjing19989/MyRead/actions/workflows/code-quality.yml/badge.svg)](https://github.com/yanjing19989/MyRead/actions/workflows/code-quality.yml)
+
 一个高性能的本地图片相册浏览系统，专为管理和浏览大量图片集合（ZIP 压缩包或文件夹）而设计。支持 100+ 相册，每个相册包含 ~1000 张图片，无需解压即可快速浏览。
 
 ## ✨ 核心特性
@@ -324,6 +328,36 @@ python server.py
 ### 数据库迁移
 - SQLite 使用 WAL 模式，支持并发读
 - 修改表结构需谨慎，考虑向后兼容
+
+## 🔄 CI/CD
+
+本项目使用 GitHub Actions 进行持续集成和部署：
+
+### CI 工作流
+- **代码质量检查**：使用 black、isort、flake8 和 mypy 进行代码风格和类型检查
+- **多版本测试**：在 Python 3.11 和 3.12 上运行测试
+- **健康检查**：自动测试应用启动和 API 端点
+- **安全扫描**：使用 safety 和 bandit 检查依赖漏洞
+
+### 构建工作流
+- **多平台构建**：自动为 Windows、Linux 和 macOS 构建可执行文件
+- **自动发布**：在创建标签时自动创建 GitHub Release
+- **构建产物**：支持手动触发构建并下载产物
+
+### 依赖检查
+- **定期扫描**：每周一自动检查依赖更新和安全漏洞
+- **详细报告**：生成包含过时包和安全问题的摘要
+
+### 代码质量分析
+- **覆盖率报告**：自动上传测试覆盖率到 Codecov
+- **代码指标**：计算圈复杂度和可维护性指数
+
+### 触发条件
+- `push` 到 master/main 分支：运行 CI 和代码质量检查
+- `pull_request`：运行所有 CI 检查
+- 创建 `v*` 标签：触发多平台构建和发布
+- 每周一：运行依赖检查
+- 手动触发：可通过 GitHub Actions 页面手动触发构建
 
 ## 📄 许可证
 
