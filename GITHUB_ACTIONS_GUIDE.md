@@ -49,7 +49,6 @@ bandit -r app/
 
 # 运行测试
 pytest -v
-pytest --cov=app --cov-report=html
 ```
 
 ## 📊 工作流触发条件
@@ -58,8 +57,6 @@ pytest --cov=app --cov-report=html
 |--------|----------|------|
 | CI | Push to master/main, PR | 代码质量和测试 |
 | Build | Tag `v*`, Manual | 构建可执行文件 |
-| Code Quality | Push to master/main, PR | 代码指标和覆盖率 |
-| Dependency Check | Weekly (Mon 9:00), Manual | 安全扫描 |
 
 ## 🔍 查看工作流结果
 
@@ -72,14 +69,6 @@ pytest --cov=app --cov-report=html
 1. 进入 Actions → Build workflow
 2. 点击具体的运行记录
 3. 下载 Artifacts 部分的文件
-
-### 覆盖率报告
-- 在 Code Quality workflow 的 Summary 中查看
-- 或访问 Codecov（如果配置）
-
-### 安全报告
-- 在 Dependency Check workflow 的 Summary 中查看
-- 查看详细的漏洞列表
 
 ## ⚠️ 故障排查
 
