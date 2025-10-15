@@ -1,0 +1,108 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows Executable
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    
+    - name: Build with PyInstaller
+      run: pyinstaller Myread.spec
+    
+    - name: Create version file
+      run: |
+        $version = if ($env:GITHUB_REF -match 'refs/tags/(.*)') { $matches[1] } else { "dev-$($env:GITHUB_SHA.Substring(0,7))" }
+        $version | Out-File -FilePath dist/MyRead/VERSION.txt -Encoding utf8
+      shell: pwsh
+    
+    - name: Package release
+      run: |
+        cd dist
+        Compress-Archive -Path MyRead -DestinationPath MyRead-Windows.zip
+      shell: pwsh
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: MyRead-Windows
+        path: dist/MyRead-Windows.zip
+        retention-days: 30
+    
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/MyRead-Windows.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    name: Build Linux Executable
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    
+    - name: Build with PyInstaller
+      run: pyinstaller Myread.spec
+    
+    - name: Create version file
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/}
+        else
+          VERSION="dev-${GITHUB_SHA:0:7}"
+        fi
+        echo "$VERSION" > dist/MyRead/VERSION.txt
+    
+    - name: Package release
+      run: |
+        cd dist
+        tar -czf MyRead-Linux.tar.gz MyRead
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: MyRead-Linux
+        path: dist/MyRead-Linux.tar.gz
+        retention-days: 30
+    
+    - name: Add to Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/MyRead-Linux.tar.gz
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

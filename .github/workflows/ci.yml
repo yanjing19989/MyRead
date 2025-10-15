@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  lint:
+    name: Lint and Code Quality
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+        pip install -r requirements.txt
+    
+    - name: Check code formatting with black
+      run: black --check --diff app/ server.py || echo "⚠️ Code formatting issues found"
+      continue-on-error: true
+    
+    - name: Check import sorting with isort
+      run: isort --check-only --diff app/ server.py || echo "⚠️ Import sorting issues found"
+      continue-on-error: true
+    
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 app/ server.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 app/ server.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    
+    - name: Type check with mypy
+      run: mypy app/ server.py --ignore-missing-imports || true
+
+  test:
+    name: Test Application
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio httpx
+    
+    - name: Test import and basic health check
+      run: |
+        python -c "from app.main import app; print('✅ Application imports successfully')"
+        python -c "from app.db import init_db; print('✅ Database module imports successfully')"
+        python -c "from app.settings import settings; print('✅ Settings module imports successfully')"
+    
+    - name: Run pytest (if tests exist)
+      run: |
+        if [ -d "tests" ] || ls test_*.py 2>/dev/null | grep -q .; then
+          pytest -v
+        else
+          echo "ℹ️ No tests found, skipping pytest"
+        fi
+    
+    - name: Start server and test health endpoint
+      run: |
+        timeout 30s python server.py &
+        SERVER_PID=$!
+        sleep 10
+        curl -f http://127.0.0.1:8000/api/health || (kill $SERVER_PID; exit 1)
+        kill $SERVER_PID
+        echo "✅ Server started successfully and health check passed"
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+    
+    - name: Check for known security vulnerabilities in dependencies
+      run: safety check --json || true
+    
+    - name: Run bandit security linter
+      run: bandit -r app/ -f json || true

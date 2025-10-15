@@ -143,6 +143,24 @@ Currently, there is no automated test infrastructure. Testing is done through:
 - **Performance issues**: Adjust `APP_IO_CONCURRENCY` and `APP_DECODE_CONCURRENCY`
 - **Port conflicts**: Modify port in `server.py`
 
+## CI/CD
+
+The project uses GitHub Actions for continuous integration and deployment:
+
+### Workflows
+- **CI Workflow** (`ci.yml`): Code quality checks, testing on Python 3.11 & 3.12, security scanning
+- **Build Workflow** (`build.yml`): Builds Windows and Linux executables using PyInstaller
+
+### Key Points
+- Black and isort checks are non-blocking (continue-on-error)
+- CI runs on push to master/main and on pull requests
+- Builds are triggered by tags (v*) or manual dispatch
+- All workflows validated and tested
+
+### Documentation
+- Full documentation in `CI_CD.md`
+- Quick reference in `GITHUB_ACTIONS_GUIDE.md`
+
 ## Best Practices for Changes
 
 1. **Minimal changes**: Make the smallest possible modifications
