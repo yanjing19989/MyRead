@@ -2,6 +2,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from .db import init_db
 from .routers import health, albums, settings as settings_router, images, events as events_router
 
@@ -29,9 +30,10 @@ app.include_router(settings_router.router, prefix="/api")
 app.include_router(images.router, prefix="/api")
 app.include_router(events_router.router, prefix="/api")
 
+static_path = Path(__file__).parent.parent / "frontend"
 # mount static demo site
 try:
-    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+    app.mount("/", StaticFiles(directory=str(static_path), html=True), name="frontend")
 except Exception:
     # ignore if folder missing in some environments
     pass
