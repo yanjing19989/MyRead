@@ -31,6 +31,7 @@ app.include_router(images.router, prefix="/api")
 app.include_router(events_router.router, prefix="/api")
 
 static_path = Path(__file__).parent.parent / "frontend"
+print(f"🔧 静态文件路径: {static_path}")
 # mount static demo site
 try:
     app.mount("/", StaticFiles(directory=str(static_path), html=True), name="frontend")
