@@ -11,7 +11,6 @@ analysis = Analysis(
     pathex=[str(project_root)],
     binaries=[],
     datas=[
-        (str(project_root / 'app'), 'app'),
         (str(project_root / 'frontend'), 'frontend'),
     ],
     hiddenimports=[
