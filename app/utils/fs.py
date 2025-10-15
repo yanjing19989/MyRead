@@ -1,6 +1,5 @@
 from __future__ import annotations
 import os
-from typing import Iterable
 
 # 支持的图片扩展（小写，不含点）
 IMAGE_EXTS = {"jpg", "jpeg", "png", "webp", "gif"}

@@ -33,6 +33,8 @@ analysis = Analysis(
     noarchive=False,
 )
 
+analysis.datas = [d for d in analysis.datas if '__pycache__' not in d[0] and not d[0].endswith('.pyc')]
+
 pyz = PYZ(analysis.pure, analysis.zipped_data, cipher=None)
 
 exe = EXE(
